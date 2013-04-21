@@ -32,11 +32,10 @@ class LoginAmount(object):
         self.period = period
         self.number = number
 
-    def add_login(self, ip):
+    def add_login(self, ip, str_now):
         """
          Add log number of ip.
         """
-        str_now = time.strftime('%d%H%M')
         vector = self.data.get(ip)
         mylock.acquire()
         if vector is not None:
@@ -59,11 +58,16 @@ class LoginAmount(object):
         To determine whether this ip exceeds the limit number.
         :return: True or False
         """
+        now = time.time()
+        str_now = time.strftime('%d%H%M')
+        self.add_login(ip, str_now)
         vector = self.data.get(ip)
+        low = time.strftime('%d%H%M', time.localtime(now - self.period * 60))
         if vector is None:
             return False
         else:
-            total = reduce(lambda x, y: x + y[1], vector[1:], 0)
+            total = reduce(lambda x, y: x + (y[1] if y[0] > low else 0),
+                            vector[1:], 0)
             return total < self.number
 
 
@@ -75,7 +79,6 @@ class LimitLoginHandler(SocketServer.BaseRequestHandler):
                 dataReceived = self.request.recv(1024).strip()
                 if not dataReceived:
                     break
-                login_amount.add_login(dataReceived)
                 is_can = login_amount.can_login(dataReceived)
                 self.request.send(str(is_can))
             except socket.timeout as err:
@@ -91,7 +94,7 @@ class LimitLoginHandler(SocketServer.BaseRequestHandler):
 
 def option_parser(parser):
     parser.add_option("-t", "--time", dest="time",
-                       help="period of time")
+                       help="period of time, minute unit")
     parser.add_option("-n", "--number", dest="number",
                       help="maximum login number in a period of time")
     parser.add_option("-p", "--port", dest="port",
