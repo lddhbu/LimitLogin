@@ -36,8 +36,7 @@ class LoginAmount(object):
         """
          Add log number of ip.
         """
-        now = time.time()
-        str_now = time.strftime('%d%H%M', time.localtime(now))
+        str_now = time.strftime('%d%H%M')
         vector = self.data.get(ip)
         mylock.acquire()
         if vector is not None:
